@@ -107,7 +107,7 @@ def validate_car_name(name):
     return True, "Valid name"
 
 
-def get_car_input():
+def get_car_input(field_bounds=None):
     """Get car creation input from user in format 'x y N'."""
     while True:
         name = input("\nEnter car name (letters only): ").strip()
@@ -133,8 +133,18 @@ def get_car_input():
             if direction not in ['N', 'S', 'E', 'W']:
                 raise ValueError("Direction must be N, S, E, or W")
             
-            # Create the car and add to list
-            car = Car(name, [x, y], direction)
+             # Check for negative coordinates
+            if x < 0 or y < 0:
+                raise ValueError(f"Position cannot have negative coordinates: ({x}, {y})")
+            
+            # Check field bounds if provided
+            if field_bounds:
+                width, height = field_bounds
+                if x >= width or y >= height:
+                    raise ValueError(f"Position ({x}, {y}) is outside field bounds ({width-1}, {height-1})")
+            
+            # Create the car with field bounds and add to list
+            car = Car(name, [x, y], direction, field_bounds)
             add_car_to_list(car)
             print(f"Car {name} created successfully!")
             
@@ -257,6 +267,7 @@ def run_simulation():
         # Track all car positions during simulation for collision detection
         collision_results = []
         collided_cars = set() 
+        boundary_violated_cars = set()
          
         # Find the maximum number of commands across all cars
         max_commands = 0
@@ -293,23 +304,29 @@ def run_simulation():
                     if indices['cmd_idx'] < len(current_sequence):
                         # Execute the next command
                         single_command = current_sequence[indices['cmd_idx']]
-                        car.move(single_command)
                         
-                        # Show feedback for each command
-                        if single_command == 'L':
-                            action = "turned left"
-                        elif single_command == 'R':
-                            action = "turned right"
-                        elif single_command == 'F':
-                            action = "moved forward"
+                        try:
+                            car.move(single_command)
+                            # Show feedback for each command
+                            if single_command == 'L':
+                                action = "turned left"
+                            elif single_command == 'R':
+                                action = "turned right"
+                            elif single_command == 'F':
+                                action = "moved forward"
                         
-                        pos = car.get_car_position()
-                        print(f"  Step {step_number}: {car_name} - {single_command} - {action}. Position: ({pos[0]}, {pos[1]}), Facing: {car.get_facing()}")
-                        
+                            pos = car.get_car_position()
+                            print(f"  Step {step_number}: {car_name} - {single_command} - {action}. Position: ({pos[0]}, {pos[1]}), Facing: {car.get_facing()}")
+                            
+                        except ValueError as e:
+                            boundary_violated_cars.add(car_name)
+                            print(f"  Step {step_number}: {car_name} - {single_command} - BOUNDARY VIOLATION!")
+                            print(f"    Error: {e}")
+                            print(f"    Car {car_name} has been stopped.")
+
                         # Move to next command
                         indices['cmd_idx'] += 1
                         
-                        # If we've finished this sequence, move to next sequence
                         if indices['cmd_idx'] >= len(current_sequence):
                             indices['seq_idx'] += 1
                             indices['cmd_idx'] = 0
@@ -323,19 +340,7 @@ def run_simulation():
              # Add newly collided cars to the set of stopped cars
             if new_collided_cars:
                 collided_cars.update(new_collided_cars)
-                print(f"  Cars {', '.join(new_collided_cars)} have been stopped due to collision.")
-        
-        # Check final positions
-        print("\nChecking final positions for collisions...")
-        final_positions = {}
-        for car_data in cars_with_commands:
-            car = car_data['car']
-            final_positions[car.get_car_name()] = car.get_car_position()
-        
-        # Check for any final position collisions that might have been missed
-        final_collision_found, final_collided_cars = check_final_collisions(final_positions, collision_results)
-        if final_collided_cars:
-            collided_cars.update(final_collided_cars)
+                print(f"  Cars {', '.join(new_collided_cars)} have been stopped due to collision.") 
         
         print("\n" + "=" * 50)
         print("      SIMULATION COMPLETED")
@@ -345,8 +350,14 @@ def run_simulation():
         print("\nFinal simulation state:")
         for car_data in cars_with_commands:
             car = car_data['car']
-            status = " (STOPPED - COLLIDED)" if car.get_car_name() in collided_cars else ""
-            print(f"- {car.get_car_name()}: Final position {car.get_car_position()}, Facing: {car.get_facing()}")
+            car_name = car.get_car_name()
+            status = ""
+            if car_name in collided_cars:
+                status = " (STOPPED - COLLIDED)"
+            elif car_name in boundary_violated_cars:
+                status = " (STOPPED - BOUNDARY VIOLATION)"
+            
+            print(f"- {car_name}: Final position {car.get_car_position()}, Facing: {car.get_facing()}{status}")
         
         # Display collision results
         if collision_results:
@@ -356,6 +367,10 @@ def run_simulation():
         else:
             print("\nNo collisions detected during simulation.")
         
+        # Display boundary violations
+        if boundary_violated_cars:
+            print(f"\nBoundary violations occurred for cars: {', '.join(boundary_violated_cars)}")
+         
     except ValueError as ve:
         print(f"Error in simulation: {ve}")
         return 1
@@ -448,7 +463,8 @@ def main():
     
     # Create smulation field in x y format
     print("\nLet's create the simulation field!")
-    x, y = get_field_input()
+    field_width, field_height = get_field_input()
+    field_bounds = (field_width, field_height)
     
     # Main program loop
     while True:
@@ -468,7 +484,7 @@ def main():
     
         if choice == '1':
             try:
-                car = get_car_input()
+                car = get_car_input(field_bounds)
                 command = get_user_commands(car)
                 if command:
                    add_command_to_car(car, command)

@@ -241,6 +241,114 @@ class DrivingCarTest(unittest.TestCase):
         # Verify C continued moving while A and B would be stopped
         self.assertNotEqual(initial_c_pos, final_c_pos)
         self.assertEqual(final_c_pos, (7, 5))    
+        
+    def test_boundary_checking_negative_coordinates(self):
+        """Test that cars cannot move to negative coordinates."""
+        # Create a car at edge position
+        car = Car("BoundaryTest", [0, 0], 'S') 
+        
+        # move South (should fail)
+        with self.assertRaises(ValueError) as context:
+            car.move('F')
+        
+        self.assertIn("cannot move to negative coordinates", str(context.exception))
+        self.assertIn("(0, -1)", str(context.exception))
+        
+        # Return car to origin
+        self.assertEqual(car.get_car_position(), (0, 0))
+        
+        # move West from origin (should also fail)
+        car_west = Car("BoundaryTestWest", [0, 0], 'W')
+        with self.assertRaises(ValueError) as context:
+            car_west.move('F')
+        
+        self.assertIn("cannot move to negative coordinates", str(context.exception))
+        self.assertIn("(-1, 0)", str(context.exception))
+        
+    def test_boundary_checking_field_bounds(self):
+        """Test that cars cannot move outside field bounds."""
+        # Create a 5x5 field
+        field_bounds = (5, 5)
+        
+        # move East
+        car_east = Car("EdgeEast", [4, 2], 'E', field_bounds)
+        with self.assertRaises(ValueError) as context:
+            car_east.move('F')
+        
+        self.assertIn("cannot move outside field bounds", str(context.exception))
+        self.assertIn("(5, 2)", str(context.exception))
+        
+        # Test car at top edge trying to move North
+        car_north = Car("EdgeNorth", [2, 4], 'N', field_bounds)
+        with self.assertRaises(ValueError) as context:
+            car_north.move('F')
+        
+        self.assertIn("cannot move outside field bounds", str(context.exception))
+        self.assertIn("(2, 5)", str(context.exception))
+        
+        # remain unchanged after failed moves
+        self.assertEqual(car_east.get_car_position(), (4, 2))
+        self.assertEqual(car_north.get_car_position(), (2, 4))
+        
+    def test_boundary_checking_valid_moves(self):
+        """Test that valid moves within boundaries work correctly."""
+        field_bounds = (10, 10)
+        
+        # Test car can move within bounds
+        car = Car("ValidMoves", [5, 5], 'N', field_bounds)
+        
+        # Move North (should succeed)
+        car.move('F')
+        self.assertEqual(car.get_car_position(), (5, 6))
+        
+        # Move East
+        car.move('R')
+        car.move('F')
+        self.assertEqual(car.get_car_position(), (6, 6))
+        
+        # Move South
+        car.move('R')
+        car.move('F')
+        self.assertEqual(car.get_car_position(), (6, 5))
+        
+        # Move West
+        car.move('R')
+        car.move('F')
+        self.assertEqual(car.get_car_position(), (5, 5))
+        
+    def test_boundary_edge_cases(self):
+        """Test boundary checking edge cases."""
+        field_bounds = (3, 3)  # Small 3x3 field
+        
+        # Test car at corner positions
+        corners = [
+            ([0, 0], 'S', "South from origin"),
+            ([0, 0], 'W', "West from origin"),
+            ([2, 2], 'N', "North from top-right"),
+            ([2, 2], 'E', "East from top-right")
+        ]
+        
+        for position, direction, description in corners:
+            with self.subTest(case=description):
+                car = Car("CornerTest", position, direction, field_bounds)
+                
+                with self.assertRaises(ValueError):
+                    car.move('F')
+                
+                # Position should remain unchanged
+                self.assertEqual(car.get_car_position(), tuple(position))
+                
+    def test_no_boundary_checking_when_disabled(self):
+        """Test that cars can move to negative coordinates when boundary checking is disabled."""
+        # Create car without field bounds
+        car = Car("NoBounds", [1, 1], 'S') 
+        
+        # move to negative coordinates
+        car.move('F')  # Move to (1, 0)
+        self.assertEqual(car.get_car_position(), (1, 0))
+        
+        car.move('F')  
+        self.assertEqual(car.get_car_position(), (1, -1))
             
 if __name__ == '__main__':
    unittest.main()
