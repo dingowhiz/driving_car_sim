@@ -196,7 +196,6 @@ The test suite covers:
 
 ## 🐛 Known Limitations
 
-- No boundary checking (next version)
 - No visualization of the grid or car positions
 - Commands are executed immediately without time delays
 - No save/load functionality for simulation states
