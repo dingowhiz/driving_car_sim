@@ -201,7 +201,7 @@ def process_command(car, command):
         try:
             add_command_to_car(car, command)
             
-            result = car.move(command)
+            car.move(command)
             
             if command == 'L':
                 print(f"Car turned left. Now facing: {car.get_facing()}")
