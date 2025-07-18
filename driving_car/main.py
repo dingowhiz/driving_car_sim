@@ -222,7 +222,6 @@ def process_command(car, command):
         print("Invalid command. Use:")
         print("  - Single commands: L (left), R (right), F (forward)")
         print("  - Command sequences: FFRFFLF (multiple moves at once)")
-        print("  - Special commands: LIST (show cars), Q (quit)")
         return True
 
 def check_collisions(current_positions, step_number, collision_results):
