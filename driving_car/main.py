@@ -87,16 +87,20 @@ def add_command_to_car(car, command):
 def get_user_commands(car):
     """Get commands from user and process them for the car."""
     display_car_status(car)
-    command = input(f"\nPlease enter the commands in sequence for car {car} (e.g., F, LLF, FFRFFLF): ").strip()
     
-    # Validate the command sequence
-    valid_moves = set(['L', 'R', 'F'])
-    if all(c in valid_moves for c in command):
-        print(f"Commands '{command}' have been set for car {car.get_car_name()}.")
-        return command
-    else:
-        print("Invalid command sequence. Only L, R, F commands are allowed.")
-        return None
+    while True:
+        command = input(f"\nPlease enter the commands in sequence for car {car} (e.g., F, LLF, FFRFFLF): ").strip()
+    
+        # Validate the command sequence
+        #valid_moves = set(['L', 'R', 'F'])
+        if process_command(car, command):
+            print(f"Commands '{command}' have been set for car {car.get_car_name()}.")
+            return command
+        else:
+            print("Command processing failed. Please try again.")
+            retry = input("Would you like to try again? (y/n): ").strip().lower()
+            if retry != 'y':
+                return None
             
 def validate_car_name(name):
     """Validate that car name contains only letters."""
@@ -161,45 +165,59 @@ def process_command(car, command):
     # Check if it's a sequence of movement commands
     valid_moves = set(['L', 'R', 'F'])
     if all(c in valid_moves for c in command):
-        # Process each command in the sequence
-        print(f"Processing command sequence: {command}")
-        
-        # Add command to car's history
-        add_command_to_car(car, command)
-        
-        for i, single_command in enumerate(command):    
-            # Execute the movement
-            car.move(single_command)
+        try:
+            print(f"Processing command sequence: {command}")
             
-            # Show feedback for each command
-            if single_command == 'L':
-                action = "turned left"
-            elif single_command == 'R':
-                action = "turned right"
-            elif single_command == 'F':
-                action = "moved forward"
+            # Add command to car's history
+            add_command_to_car(car, command)
             
-            pos = car.get_car_position()
-            print(f"  Step {i+1}: {single_command} - Car {action}. Position: ({pos[0]}, {pos[1]}), Facing: {car.get_facing()}")
-        
-        print(f"Command sequence completed!")
-        return True
+            for i, single_command in enumerate(command):    
+                # Execute the movement
+                car.move(single_command)
+                
+                # Show feedback for each command
+                if single_command == 'L':
+                    action = "turned left"
+                elif single_command == 'R':
+                    action = "turned right"
+                elif single_command == 'F':
+                    action = "moved forward"
+                
+                pos = car.get_car_position()
+                print(f"  Step {i+1}: {single_command} - Car {action}. Position: ({pos[0]}, {pos[1]}), Facing: {car.get_facing()}")
+            
+            print(f"Command sequence completed!")
+            return True
+               
+        except ValueError as e:
+            print(f"Error executing command sequence: {e}")
+            return False
+        except Exception as e:
+            print(f"Unexpected error during command execution: {e}")
+            return False 
     
     # Handle single commands
     elif command in valid_moves:
-        # Add command to car's history
-        add_command_to_car(car, command)
+        try:
+            add_command_to_car(car, command)
+            
+            result = car.move(command)
+            
+            if command == 'L':
+                print(f"Car turned left. Now facing: {car.get_facing()}")
+            elif command == 'R':
+                print(f"Car turned right. Now facing: {car.get_facing()}")
+            elif command == 'F':
+                print(f"Car moved forward.")
+            return True
         
-        result = car.move(command)
-        
-        if command == 'L':
-            print(f"Car turned left. Now facing: {car.get_facing()}")
-        elif command == 'R':
-            print(f"Car turned right. Now facing: {car.get_facing()}")
-        elif command == 'F':
-            print(f"Car moved forward.")
-        
-        return True
+        except ValueError as e:
+            print(f"Error executing command '{command}': {e}")
+            return False  # Failed due to boundary violation or invalid command
+        except Exception as e:
+            print(f"Unexpected error executing command '{command}': {e}")
+            return False  # Failed due to unexpected error
+   
     else:
         print("Invalid command. Use:")
         print("  - Single commands: L (left), R (right), F (forward)")
@@ -487,8 +505,11 @@ def main():
                 car = get_car_input(field_bounds)
                 command = get_user_commands(car)
                 if command:
-                   add_command_to_car(car, command)
-                   print(f"\nCommands {command} added to car {car.get_car_name()}")
+                #    add_command_to_car(car, command)
+                    print(f"\nCar {car.get_car_name()} is ready for simulation!")
+                else:
+                    print(f"\nNo commands were added to car {car.get_car_name()}.")
+  
             except Exception as e:
                 print(f"Error adding car: {e}")
                 continue
